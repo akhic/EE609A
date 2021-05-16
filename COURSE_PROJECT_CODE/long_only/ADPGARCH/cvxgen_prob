@@ -1,0 +1,39 @@
+# CVXGEN source for long-only example.
+# Performance Bounds and Suboptimal Policies for Multi-Period Investment
+# by Stephen Boyd, Mark T. Mueller, Brendan O'Donoghue, Yang Wang
+#
+# this file contains the CVXGEN problem description. the C source
+# for the generated solver can be found in the directory cvxgen/
+#
+# to make the solver start MATLAB and enter the following at the
+# command prompt:
+#
+# >> make_solver
+#
+
+dimensions
+	n=30 # num assets
+end
+
+parameters
+	Sigma(n,n) psd # covariance matrix
+	S(n,n) diagonal psd # quadratic cost matrix
+	x(n) # current state
+	lambda positive # risk tradeoff parameter
+	PM(n,n) psd # P.*M ... where P,p are from the quadratic approx val. fct.
+	pm(n) # p.*\mu ... and M is the second moment, \mu the first moment
+	kappa(n) positive # absolute val trans cost
+	sh(n) positive # shorting trans cost
+end
+
+variables
+	u(n) # the action
+end
+
+minimize
+	sum(u) + kappa'*abs(u) + quad(u,S) + lambda*quad((x+u),Sigma)+quad((x+u),PM)+2*pm'*(x+u)
+# minimize (l(x,u) + E V(x^+))
+
+subject to
+	(x+u)>=0 # long only
+end

@@ -1,0 +1,95 @@
+clear all;
+cd ..
+data_gen % call data generation file
+cd leverage_limit
+horiz=20; % max MPC lookahead
+
+N1=100;
+
+randn('seed',1);rand('seed',1);
+
+costs=zeros(T,N1);ts=0;
+%%%%%%%%
+su=costs;cash=costs;risk=costs;tot=costs;
+short=costs;quad=costs;abs_c=costs;short_pos=costs;
+long_pos=costs;tot_pos=costs;pos_val=costs;
+%%%%%%%%
+for i=1:N1
+    i
+    x=x_init;
+    
+    cs=zeros(T,1);
+    %%%%%%%%
+    su_t=cs;cash_t=cs;risk_t=cs;tot_t=cs;
+    short_t=cs;quad_t=cs;abs_c_t=cs;short_pos_t=cs;
+    long_pos_t=cs;tot_pos_t=cs;pos_val_t=cs;
+    %%%%%%%%
+    
+    for t=1:T
+        if t==T
+            u=x_term-x;
+        else
+            H=min(horiz,T-t+1);
+            cvx_status='';
+            while (strcmp(cvx_status,'Infeasible')||strcmp(cvx_status,'Failed'))
+            tic;
+            cvx_begin
+            cvx_precision low
+            %cvx_solver sdpt3
+            %cvx_quiet(true);
+            variables X(n,H) U(n,H)
+            X(:,1)==x;
+            obj=0;
+            for j=1:H
+                obj=obj+sum(U(:,j))+kappa'*abs(U(:,j))+s'*(U(:,j).^2)+...
+                    sh'*pos(-(X(:,j)+U(:,j)))+lambda*(X(:,j)+U(:,j))'*sigma*(X(:,j)+U(:,j));
+                if j<H
+                    X(:,j+1)==r_bar.*(X(:,j)+U(:,j));
+                end
+                if T-t<horiz && j==H
+                    X(:,j)+U(:,j)==0;
+                end
+                % constraints:
+                sum(pos(-X(:,j)-U(:,j)))<=eta*sum(X(:,j)+U(:,j));
+            end
+            minimize(obj)
+            cvx_end
+            ts=ts+toc;
+            
+            if (strcmp(cvx_status,'Infeasible')||strcmp(cvx_status,'Failed'))
+               x=x+0.01*randn 
+            end
+            
+            end
+        
+            
+            u=U(:,1);
+        end
+        
+        
+        %%%%%%
+        su_t(t)=sum(u); % gross difference between asset sales and purchases
+        cash_t(t)=sum(u) + sh'*pos(-x-u)+ kappa'*abs(u) + s'*u.^2; % gross cash
+        short_t(t)=sh'*pos(-x-u); % shorting cost
+        quad_t(t)=s'*u.^2; % quadratic transaction cost
+        abs_c_t(t)=kappa'*abs(u); % absolute value transaction cost
+        risk_t(t)=lambda*(x+u)'*sigma*(x+u); % risk penalty fee
+        tot_t(t)=sum(u) + sh'*pos(-x-u)+ kappa'*abs(u) + s'*u.^2 + lambda*(x+u)'*sigma*(x+u); % net cash
+        short_pos_t(t)=sum(pos(-x-u)); % short position
+        long_pos_t(t)=sum(pos(x+u)); % long position
+        tot_pos_t(t)=norm(x+u,1); % total position
+        pos_val_t(t)=sum(x+u); % net value of portfolio
+        %%%%%%
+        
+        cs(t) = sum(u) + sh'*pos(-x-u) + kappa'*abs(u) + s'*u.^2 + lambda*(x+u)'*sigma*(x+u);% total cost at time t
+        x=diag(exp(rt_Sigma_t*randn(n,1)+mu))*(x+u);        
+        
+    end
+    costs(:,i) = cs;
+    %%%%%%%
+    su(:,i)=su_t;cash(:,i)=cash_t;risk(:,i)=risk_t;tot(:,i)=tot_t;
+    short(:,i)=short_t;quad(:,i)=quad_t;abs_c(:,i)=abs_c_t;short_pos(:,i)=short_pos_t;
+    long_pos(:,i)=long_pos_t;tot_pos(:,i)=tot_pos_t;pos_val(:,i)=pos_val_t;
+    %%%%%%%
+    save MPC.mat;
+end

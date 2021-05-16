@@ -1,0 +1,97 @@
+Simulation codes and files for our project :
+"Multi-Period portfolio Optimization using asymmetric GARCH Model ",
+
+We have taken the skeleton of our code from the Source Code on 
+https://web.stanford.edu/~boyd%20/papers/port_opt_bound.html. The credit for that part of the code totally goes to
+the authors of 
+Boyd, Stephen. (2014). Performance Bounds and Suboptimal Policies for Multi-Period Investment. 1. 1-72. 10.1561/2400000001.
+-------------------
+Requirements:
+-------------------
+1. MATLAB
+2. cvx v1.22 (Already included in the code) Available at http://cvxr.com/cvx/
+3. cvxgen (Already included in the code) Available at https://cvxgen.com/docs/index.html
+4. Curve Fitting Toolbox Matlab : Can be installed when MATLAB prompts to
+5. Econometrics Toolbox Matlab : Can be installed when MATLAB prompts to
+6. MinGW C compiler : Can be installed when MATLAB prompts to
+7. Jupyter Notebook
+
+-------------------------
+Run Time : 3-5 hours
+-------------------------
+
+---------------
+Files:
+----------------
+Return Series Generation : This folder contains the price series data of the stocks that we used and the code
+to arrange the data in a single csv file(log_return_full.csv).
+
+data_gen.m : It generates the parameters. It has been taken from the souce code. But we have changed the parameters
+and have also changed the mean and covariances of the log return distribution to our empirical calculations.
+
+Simulations_result.m : It plots the required graphs after the simulations have taken place.
+
+run_all.m : It runs all the simulations for the 3 periods and plots the results.
+
+cvx : It contains cvx v1.22
+
+leverage_limit : Contains files for the Leverage Limit Constraints.
+
+long_only : Contains files for the long only Constraints.
+
+unconstrained : Contains files for the unconstrained case. 
+
+Subdirectories: 
+
+Return Series Generation/Combining data.ipynb : This is a jupyter notebook file that clubs
+historical data present in the Historical directory and generates 4 csv files, log_returns_100_1.csv,log_returns_100_2.csv,log_returns_100_3.csv,log_return_full.csv
+and also estimates the mean and covariance of log return distribution.
+
+The folders leverage_limit, long_only and unconstrained contains:
+1. ADP : It has been taken from the source code. We changed in run_adp.m such that it takes to
+ run on real data unlikewise before it run on generated data and optimizes and simulated many times. 
+
+2. ADPGARCH : we change in solve_sdp such that it optimizes on variable predictive volatility 
+and return mean by fitting and forecasting using GJR(3,3) model. We change in run_adp such it
+ optimizes on variable predictive volatility and return mean by fitting and forecasting using
+ GJR(3,3) model and run on real data rather than it did earlier by simulating on generated
+ data for many simulation
+
+3. MPC : It has been taken from the source code. We change in run_mpc such that it takes to run on real data unlikewise before 
+it run on generated data and optimizes and simulated many times. 
+
+4. MPCGARCH :we change in run_mpc such that it optimizes on variable predictive volatility 
+and return mean by fitting and forecasting using GJR(3,3) model and run on real data rather
+ than it did earlier by simulating on generated data for many simulation
+
+Each of the above files contain cvxgen and make solver files which are used for initialising
+the optimization problem. They have also been taken from the source code.
+ 
+5. run.m : It runs the particular example. 
+
+ 
+---------------------------------
+To run the simulations:
+---------------------------------
+The simulations take about 4 hours to run. 
+It has been run already and the plots and simulation results are also present. 
+If you don't want to run the simulations, you can just look at the results and the plots.
+
+If you just want to generate the plots, you can run Simulations_result.m. 
+
+After meeting the requirements, run the run_all.m file to run for 
+all the constraints over all the periods.
+
+To run simulations for a particular constraint : go to the corresponding folder and run the 
+run.m file. 
+
+---------------------------
+Results Storage: 
+---------------------------
+The results for the MPC and MPCGARCH simulations are stored in MPC_data.mat files present in 
+the corresponding folders.
+
+The results for the ADP and ADPGARCH simulations are stored in MC_data.mat files present in
+the corresponding folders.
+
+The plots are also stores in figx.png files where x = 1-18

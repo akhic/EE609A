@@ -1,0 +1,98 @@
+clear all;
+cd ../..
+data_gen % call data generation file
+cd unconstrained/MPC/
+
+cvxgen(700180250624)
+
+settings.verbose=0;
+params.Sigma = sigma;
+params.S = diag(s);
+params.kappa = kappa;
+params.lambda = lambda;
+params.sh = sh;
+params.r_bar = r_bar;
+
+N1=100;
+
+randn('seed',1);rand('seed',1);
+rho=0.1;
+
+costs=zeros(T,N1);
+tic
+for i=1:N1
+    i
+    x=x_init;
+    cs=zeros(T,1);
+    Zs=zeros(n,T);
+    Vs=zeros(n,T);
+    Ys=zeros(n,T);
+    for t=1:T
+        if t==T
+            u=x_term-x;
+        else
+            while(1)
+                Vsold=Vs;Zsold=Zs;
+                for tau=t:T
+                    st = tau-t+1;
+                    
+                    params.rtp1 = rho/2;
+                    params.rtm1 = rho/2;
+                    params.az = 0;params.av=0;
+                    params.x_constraint = zeros(n,1);
+                    
+                    if tau==t
+                        params.az=1;
+                        params.av=0;
+                        params.x_constraint=x;
+                        params.rtm1=0;
+                        params.ztm1 = zeros(n,1);
+                        params.ztp1 = Zs(:,st+1);
+                        params.vtm1 = zeros(n,1);
+                        params.yt = Ys(:,st);
+                        params.ytm1 = zeros(n,1);
+                    elseif tau==T
+                        params.az=1;
+                        params.av=1;
+                        params.x_constraint=x_term;
+                        params.rtp1=0;
+                        params.ztm1 = Zs(:,st-1);
+                        params.ztp1 = zeros(n,1);
+                        params.vtm1 = Vs(:,st-1);
+                        params.yt = zeros(n,1);
+                        params.ytm1 = Ys(:,st-1);
+                    else
+                        params.ztm1 = Zs(:,st-1);
+                        params.ztp1 = Zs(:,st+1);
+                        params.vtm1 = Vs(:,st-1);
+                        params.yt = Ys(:,st);
+                        params.ytm1 = Ys(:,st-1);
+                    end
+                    
+                    [vars, status] = csolve(params, settings);
+                    Zs(:,st) = vars.z;
+                    Vs(:,st) = vars.v;
+                    if tau~=t
+                        Ys(:,st-1) = Ys(:,st-1)+Zs(:,st)-diag(r_bar)*(Zs(:,st-1)+Vs(:,st-1));
+                    end
+                end
+                enm=norm(Vs-Vsold,'fro')+norm(Zs-Zsold,'fro');
+                if(enm <= 0.3)
+                    break;
+                end
+            end
+            u=Vs(:,1);
+            Zs=Zs(:,2:end);
+            Vs=Vs(:,2:end);
+            Ys=Ys(:,2:end);
+        end
+        
+        cs(t) = sum(u) + sh'*pos(-x-u) + kappa'*abs(u) + s'*u.^2 + lambda*(x+u)'*sigma*(x+u);% total cost at time t
+        x=diag(exp(rt_Sigma_t*randn(n,1)+mu))*(x+u);
+        
+    end
+    clear Zs Vs Ys
+    costs(:,i) = cs;
+    save MPC.mat;
+end
+tadmm = toc;
